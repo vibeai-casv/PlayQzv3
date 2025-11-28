@@ -1,0 +1,1536 @@
+openapi: 3.1.0
+info:
+  title: AI Quiz Application API
+  description: |
+    A comprehensive API for an AI-powered quiz platform that supports user authentication,
+    quiz generation, question management, and analytics.
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@aiquiz.com
+
+servers:
+  - url: https://hvkduszjecwrmdhyhndb.supabase.co
+    description: Production server
+
+security:
+  - BearerAuth: []
+
+tags:
+  - name: Authentication
+    description: User authentication and authorization endpoints
+  - name: User Profile
+    description: User profile management
+  - name: Quiz
+    description: Quiz generation and attempt management
+  - name: Questions
+    description: Question management (Admin only)
+  - name: Media
+    description: Media file management (Admin only)
+  - name: Admin
+    description: Administrative operations
+
+paths:
+  # ==================== AUTHENTICATION ENDPOINTS ====================
+  /auth/signup:
+    post:
+      tags:
+        - Authentication
+      summary: Register a new user
+      description: Create a new user account with email or phone number
+      operationId: signupUser
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: user@example.com
+                phone:
+                  type: string
+                  pattern: '^\+?[1-9]\d{1,14}$'
+                  example: "+1234567890"
+                password:
+                  type: string
+                  format: password
+                  minLength: 8
+                  example: SecurePass123!
+                name:
+                  type: string
+                  example: John Doe
+              oneOf:
+                - required: [email]
+                - required: [phone]
+      responses:
+        '201':
+          description: User successfully registered
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+                  token:
+                    type: string
+                    description: JWT access token
+                    example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                  refreshToken:
+                    type: string
+                    description: Refresh token for obtaining new access tokens
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: User already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Login user
+      description: Authenticate user with Google OAuth or Phone OTP
+      operationId: loginUser
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  title: Google OAuth Login
+                  required:
+                    - provider
+                    - token
+                  properties:
+                    provider:
+                      type: string
+                      enum: [google]
+                    token:
+                      type: string
+                      description: Google OAuth token
+                - type: object
+                  title: Phone OTP Login
+                  required:
+                    - phone
+                  properties:
+                    phone:
+                      type: string
+                      pattern: '^\+?[1-9]\d{1,14}$'
+                      example: "+1234567890"
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+                  token:
+                    type: string
+                  refreshToken:
+                    type: string
+                  requiresOtp:
+                    type: boolean
+                    description: True if OTP verification is needed (phone login)
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /auth/verify-otp:
+    post:
+      tags:
+        - Authentication
+      summary: Verify OTP code
+      description: Verify the OTP code sent to user's phone
+      operationId: verifyOtp
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - phone
+                - otp
+              properties:
+                phone:
+                  type: string
+                  pattern: '^\+?[1-9]\d{1,14}$'
+                  example: "+1234567890"
+                otp:
+                  type: string
+                  pattern: '^\d{6}$'
+                  example: "123456"
+      responses:
+        '200':
+          description: OTP verified successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+                  token:
+                    type: string
+                  refreshToken:
+                    type: string
+        '401':
+          description: Invalid or expired OTP
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /auth/me:
+    get:
+      tags:
+        - Authentication
+      summary: Get current user profile
+      description: Retrieve the authenticated user's profile information
+      operationId: getCurrentUser
+      responses:
+        '200':
+          description: User profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ==================== USER PROFILE ENDPOINTS ====================
+  /profiles/{userId}:
+    get:
+      tags:
+        - User Profile
+      summary: Get user profile
+      description: Retrieve a specific user's profile by ID
+      operationId: getUserProfile
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: User ID
+      responses:
+        '200':
+          description: Profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    patch:
+      tags:
+        - User Profile
+      summary: Update user profile
+      description: Update the authenticated user's profile information
+      operationId: updateUserProfile
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: Jane Doe
+                institution:
+                  type: string
+                  example: MIT
+                category:
+                  type: string
+                  enum: [student, professional, educator, hobbyist]
+                  example: student
+                bio:
+                  type: string
+                  maxLength: 500
+                  example: Computer Science enthusiast
+                avatar:
+                  type: string
+                  format: uri
+                  example: https://example.com/avatar.jpg
+                preferences:
+                  type: object
+                  properties:
+                    notifications:
+                      type: boolean
+                    theme:
+                      type: string
+                      enum: [light, dark, auto]
+      responses:
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /profiles/{userId}/activity:
+    get:
+      tags:
+        - User Profile
+      summary: Get user activity logs
+      description: Retrieve activity logs for a specific user
+      operationId: getUserActivity
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Activity logs retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  activities:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ActivityLog'
+                  total:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ==================== QUIZ ENDPOINTS ====================
+  /quiz/generate:
+    post:
+      tags:
+        - Quiz
+      summary: Generate a new quiz
+      description: Generate a quiz based on specified configuration
+      operationId: generateQuiz
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - numQuestions
+                - difficulty
+                - categories
+              properties:
+                numQuestions:
+                  type: integer
+                  minimum: 5
+                  maximum: 50
+                  example: 10
+                difficulty:
+                  type: string
+                  enum: [easy, medium, hard, mixed]
+                  example: medium
+                categories:
+                  type: array
+                  items:
+                    type: string
+                  minItems: 1
+                  example: ["science", "history"]
+                timeLimit:
+                  type: integer
+                  description: Time limit in seconds per question
+                  minimum: 10
+                  maximum: 300
+                  example: 60
+                includeExplanations:
+                  type: boolean
+                  default: true
+      responses:
+        '201':
+          description: Quiz generated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  quizId:
+                    type: string
+                    format: uuid
+                  questions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Question'
+                  config:
+                    type: object
+                    properties:
+                      numQuestions:
+                        type: integer
+                      difficulty:
+                        type: string
+                      categories:
+                        type: array
+                        items:
+                          type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /quiz/attempts:
+    post:
+      tags:
+        - Quiz
+      summary: Create a new quiz attempt
+      description: Start a new quiz attempt for the authenticated user
+      operationId: createQuizAttempt
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - quizId
+              properties:
+                quizId:
+                  type: string
+                  format: uuid
+      responses:
+        '201':
+          description: Quiz attempt created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuizAttempt'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /quiz/attempts/{attemptId}:
+    get:
+      tags:
+        - Quiz
+      summary: Get quiz attempt details
+      description: Retrieve details of a specific quiz attempt
+      operationId: getQuizAttempt
+      parameters:
+        - name: attemptId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Quiz attempt retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuizAttempt'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /quiz/attempts/{attemptId}/submit:
+    post:
+      tags:
+        - Quiz
+      summary: Submit quiz answers
+      description: Submit answers for a quiz attempt
+      operationId: submitQuizAttempt
+      parameters:
+        - name: attemptId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - answers
+              properties:
+                answers:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/QuizResponse'
+                timeSpent:
+                  type: integer
+                  description: Total time spent in seconds
+      responses:
+        '200':
+          description: Quiz submitted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  attemptId:
+                    type: string
+                    format: uuid
+                  score:
+                    type: number
+                    format: float
+                    minimum: 0
+                    maximum: 100
+                  correctAnswers:
+                    type: integer
+                  totalQuestions:
+                    type: integer
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        questionId:
+                          type: string
+                          format: uuid
+                        correct:
+                          type: boolean
+                        userAnswer:
+                          type: string
+                        correctAnswer:
+                          type: string
+                        explanation:
+                          type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /quiz/attempts/history:
+    get:
+      tags:
+        - Quiz
+      summary: Get quiz history
+      description: Retrieve the authenticated user's quiz attempt history
+      operationId: getQuizHistory
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [in_progress, completed, abandoned]
+      responses:
+        '200':
+          description: Quiz history retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  attempts:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/QuizAttempt'
+                  total:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ==================== QUESTIONS ENDPOINTS (ADMIN) ====================
+  /questions:
+    get:
+      tags:
+        - Questions
+      summary: List all questions
+      description: Retrieve a list of questions with optional filters (Admin only)
+      operationId: listQuestions
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: difficulty
+          in: query
+          schema:
+            type: string
+            enum: [easy, medium, hard]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search questions by text
+      responses:
+        '200':
+          description: Questions retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  questions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Question'
+                  total:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    post:
+      tags:
+        - Questions
+      summary: Create a new question
+      description: Create a new quiz question (Admin only)
+      operationId: createQuestion
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuestionInput'
+      responses:
+        '201':
+          description: Question created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Question'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /questions/{id}:
+    patch:
+      tags:
+        - Questions
+      summary: Update a question
+      description: Update an existing quiz question (Admin only)
+      operationId: updateQuestion
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuestionInput'
+      responses:
+        '200':
+          description: Question updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Question'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - Questions
+      summary: Delete a question
+      description: Delete a quiz question (Admin only)
+      operationId: deleteQuestion
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Question deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /questions/generate-ai:
+    post:
+      tags:
+        - Questions
+      summary: Auto-generate questions using AI
+      description: Generate quiz questions automatically using AI (Admin only)
+      operationId: generateAIQuestions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - topic
+                - count
+              properties:
+                topic:
+                  type: string
+                  example: "World War II"
+                count:
+                  type: integer
+                  minimum: 1
+                  maximum: 50
+                  example: 10
+                difficulty:
+                  type: string
+                  enum: [easy, medium, hard, mixed]
+                  default: mixed
+                categories:
+                  type: array
+                  items:
+                    type: string
+                  example: ["history"]
+      responses:
+        '201':
+          description: AI questions generated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  questions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Question'
+                  count:
+                    type: integer
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # ==================== MEDIA ENDPOINTS (ADMIN) ====================
+  /media/upload:
+    post:
+      tags:
+        - Media
+      summary: Upload media file
+      description: Upload an image file (logo/personality) (Admin only)
+      operationId: uploadMedia
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+                - type
+              properties:
+                file:
+                  type: string
+                  format: binary
+                type:
+                  type: string
+                  enum: [logo, personality, question_image, avatar]
+                description:
+                  type: string
+                  maxLength: 200
+      responses:
+        '201':
+          description: File uploaded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MediaFile'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '413':
+          description: File too large
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /media:
+    get:
+      tags:
+        - Media
+      summary: List all media files
+      description: Retrieve a list of all media files (Admin only)
+      operationId: listMedia
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [logo, personality, question_image, avatar]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Media files retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  files:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MediaFile'
+                  total:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /media/{id}:
+    delete:
+      tags:
+        - Media
+      summary: Delete media file
+      description: Delete a media file (Admin only)
+      operationId: deleteMedia
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Media file deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ==================== ADMIN ENDPOINTS ====================
+  /admin/users:
+    get:
+      tags:
+        - Admin
+      summary: List all users
+      description: Retrieve a list of all users with filters (Admin only)
+      operationId: listUsers
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, disabled]
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum: [student, professional, educator, hobbyist]
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search by name, email, or institution
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Users retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  users:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/UserProfile'
+                  total:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/users/{userId}/disable:
+    patch:
+      tags:
+        - Admin
+      summary: Disable or enable a user
+      description: Disable or enable a user account (Admin only)
+      operationId: toggleUserStatus
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - disabled
+              properties:
+                disabled:
+                  type: boolean
+                reason:
+                  type: string
+                  maxLength: 500
+      responses:
+        '200':
+          description: User status updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  userId:
+                    type: string
+                    format: uuid
+                  disabled:
+                    type: boolean
+                  updatedAt:
+                    type: string
+                    format: date-time
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /admin/analytics:
+    get:
+      tags:
+        - Admin
+      summary: Get dashboard analytics
+      description: Retrieve analytics data for the admin dashboard
+      operationId: getAnalytics
+      parameters:
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Start date for analytics period
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date
+          description: End date for analytics period
+      responses:
+        '200':
+          description: Analytics data retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalUsers:
+                    type: integer
+                  activeUsers:
+                    type: integer
+                    description: Users active in the specified period
+                  totalQuizzes:
+                    type: integer
+                  totalAttempts:
+                    type: integer
+                  averageScore:
+                    type: number
+                    format: float
+                  categoryStats:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        category:
+                          type: string
+                        attempts:
+                          type: integer
+                        averageScore:
+                          type: number
+                  difficultyStats:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        difficulty:
+                          type: string
+                        attempts:
+                          type: integer
+                        averageScore:
+                          type: number
+                  userGrowth:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        date:
+                          type: string
+                          format: date
+                        count:
+                          type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+# ==================== COMPONENTS ====================
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from login or signup
+
+  schemas:
+    # ==================== USER SCHEMAS ====================
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        phone:
+          type: string
+          example: "+1234567890"
+        name:
+          type: string
+          example: John Doe
+        role:
+          type: string
+          enum: [user, admin]
+          default: user
+        createdAt:
+          type: string
+          format: date-time
+        lastLoginAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - role
+        - createdAt
+
+    UserProfile:
+      allOf:
+        - $ref: '#/components/schemas/User'
+        - type: object
+          properties:
+            institution:
+              type: string
+              example: MIT
+            category:
+              type: string
+              enum: [student, professional, educator, hobbyist]
+              example: student
+            bio:
+              type: string
+              maxLength: 500
+            avatar:
+              type: string
+              format: uri
+            preferences:
+              type: object
+              properties:
+                notifications:
+                  type: boolean
+                  default: true
+                theme:
+                  type: string
+                  enum: [light, dark, auto]
+                  default: auto
+            stats:
+              type: object
+              properties:
+                totalAttempts:
+                  type: integer
+                averageScore:
+                  type: number
+                  format: float
+                bestScore:
+                  type: number
+                  format: float
+                totalTimeSpent:
+                  type: integer
+                  description: Total time in seconds
+            disabled:
+              type: boolean
+              default: false
+
+    # ==================== QUESTION SCHEMAS ====================
+    Question:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        questionText:
+          type: string
+          example: "What is the capital of France?"
+        questionType:
+          type: string
+          enum: [multiple_choice, true_false, short_answer]
+          default: multiple_choice
+        options:
+          type: array
+          items:
+            type: string
+          minItems: 2
+          maxItems: 6
+          example: ["Paris", "London", "Berlin", "Madrid"]
+        correctAnswer:
+          type: string
+          example: "Paris"
+        explanation:
+          type: string
+          example: "Paris is the capital and largest city of France."
+        difficulty:
+          type: string
+          enum: [easy, medium, hard]
+        category:
+          type: string
+          example: "geography"
+        tags:
+          type: array
+          items:
+            type: string
+          example: ["europe", "capitals"]
+        imageUrl:
+          type: string
+          format: uri
+        points:
+          type: integer
+          minimum: 1
+          default: 10
+        timeLimit:
+          type: integer
+          description: Time limit in seconds
+          default: 60
+        createdBy:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - questionText
+        - questionType
+        - correctAnswer
+        - difficulty
+        - category
+        - createdAt
+
+    QuestionInput:
+      type: object
+      properties:
+        questionText:
+          type: string
+        questionType:
+          type: string
+          enum: [multiple_choice, true_false, short_answer]
+        options:
+          type: array
+          items:
+            type: string
+        correctAnswer:
+          type: string
+        explanation:
+          type: string
+        difficulty:
+          type: string
+          enum: [easy, medium, hard]
+        category:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        imageUrl:
+          type: string
+          format: uri
+        points:
+          type: integer
+          minimum: 1
+        timeLimit:
+          type: integer
+      required:
+        - questionText
+        - questionType
+        - correctAnswer
+        - difficulty
+        - category
+
+    # ==================== QUIZ ATTEMPT SCHEMAS ====================
+    QuizAttempt:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        quizId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [in_progress, completed, abandoned]
+          default: in_progress
+        score:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 100
+        correctAnswers:
+          type: integer
+        totalQuestions:
+          type: integer
+        responses:
+          type: array
+          items:
+            $ref: '#/components/schemas/QuizResponse'
+        startedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+        timeSpent:
+          type: integer
+          description: Time spent in seconds
+        config:
+          type: object
+          properties:
+            numQuestions:
+              type: integer
+            difficulty:
+              type: string
+            categories:
+              type: array
+              items:
+                type: string
+      required:
+        - id
+        - userId
+        - quizId
+        - status
+        - startedAt
+
+    QuizResponse:
+      type: object
+      properties:
+        questionId:
+          type: string
+          format: uuid
+        userAnswer:
+          type: string
+        isCorrect:
+          type: boolean
+        timeSpent:
+          type: integer
+          description: Time spent on this question in seconds
+        answeredAt:
+          type: string
+          format: date-time
+      required:
+        - questionId
+        - userAnswer
+
+    # ==================== ACTIVITY LOG SCHEMA ====================
+    ActivityLog:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        activityType:
+          type: string
+          enum: [login, quiz_started, quiz_completed, profile_updated, achievement_earned]
+        description:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+        timestamp:
+          type: string
+          format: date-time
+      required:
+        - id
+        - userId
+        - activityType
+        - timestamp
+
+    # ==================== MEDIA FILE SCHEMA ====================
+    MediaFile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        filename:
+          type: string
+          example: "logo.png"
+        url:
+          type: string
+          format: uri
+          example: "https://hvkduszjecwrmdhyhndb.supabase.co/storage/v1/object/public/media/logo.png"
+        type:
+          type: string
+          enum: [logo, personality, question_image, avatar]
+        mimeType:
+          type: string
+          example: "image/png"
+        size:
+          type: integer
+          description: File size in bytes
+          example: 204800
+        description:
+          type: string
+        uploadedBy:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - filename
+        - url
+        - type
+        - mimeType
+        - size
+        - createdAt
+
+    # ==================== ERROR SCHEMA ====================
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              example: VALIDATION_ERROR
+            message:
+              type: string
+              example: Invalid request parameters
+            details:
+              type: array
+              items:
+                type: object
+                properties:
+                  field:
+                    type: string
+                  message:
+                    type: string
+            timestamp:
+              type: string
+              format: date-time
+      required:
+        - error
+
+  # ==================== COMMON RESPONSES ====================
+  responses:
+    BadRequest:
+      description: Bad request - Invalid input parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: VALIDATION_ERROR
+              message: Invalid request parameters
+              details:
+                - field: email
+                  message: Invalid email format
+
+    Unauthorized:
+      description: Unauthorized - Authentication required or token invalid
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: UNAUTHORIZED
+              message: Invalid or expired authentication token
+
+    Forbidden:
+      description: Forbidden - Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: FORBIDDEN
+              message: You do not have permission to access this resource
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: NOT_FOUND
+              message: The requested resource was not found
