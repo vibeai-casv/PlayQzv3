@@ -1,0 +1,102 @@
+﻿
+> client@0.0.0 lint
+> eslint .
+
+
+E:\projects\playqzv3\client\src\components\admin\QuestionEditor.tsx
+  23:50  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       @typescript-eslint/no-explicit-any
+  39:34  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       @typescript-eslint/no-explicit-any
+  76:26  warning  Compilation Skipped: Use of incompatible library
+
+This API returns functions which cannot be memoized without leading to stale UI. To prevent this, by default React Compiler will skip memoizing this component/hook. However, you may see issues if values from this API are passed to other components/hooks that are memoized.
+
+E:\projects\playqzv3\client\src\components\admin\QuestionEditor.tsx:76:26
+  74 |     };
+  75 |
+> 76 |     const questionType = form.watch('question_type');
+     |                          ^^^^ React Hook Form's `useForm()` API returns a `watch()` function which cannot be memoized safely.
+  77 |
+  78 |     return (
+  79 |         // eslint-disable-next-line @typescript-eslint/no-explicit-any  react-hooks/incompatible-library
+
+E:\projects\playqzv3\client\src\components\auth\LoginForm.tsx
+  259:8  warning  React Hook useEffect has a missing dependency: 'onComplete'. Either include it or remove the dependency array. If 'onComplete' changes too often, find the parent component that defines it and wrap that definition in useCallback  react-hooks/exhaustive-deps
+
+E:\projects\playqzv3\client\src\components\auth\SignupForm.tsx
+   42:18  error    'error' is defined but never used                                                                                                                                                                                                    @typescript-eslint/no-unused-vars
+   68:25  error    Unexpected any. Specify a different type                                                                                                                                                                                             @typescript-eslint/no-explicit-any
+  130:25  error    Unexpected any. Specify a different type                                                                                                                                                                                             @typescript-eslint/no-explicit-any
+  401:8   warning  React Hook useEffect has a missing dependency: 'onComplete'. Either include it or remove the dependency array. If 'onComplete' changes too often, find the parent component that defines it and wrap that definition in useCallback  react-hooks/exhaustive-deps
+
+E:\projects\playqzv3\client\src\components\ui\Image.tsx
+  9:46  error  'fallbackSrc' is defined but never used  @typescript-eslint/no-unused-vars
+
+E:\projects\playqzv3\client\src\components\ui\Skeleton.tsx
+  3:11  error  An interface declaring no members is equivalent to its supertype  @typescript-eslint/no-empty-object-type
+
+E:\projects\playqzv3\client\src\lib\utils.ts
+  40:46  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  40:56  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\projects\playqzv3\client\src\pages\admin\Dashboard.tsx
+  26:40  error    Unexpected any. Specify a different type                                                                                                                                                    @typescript-eslint/no-explicit-any
+  27:50  error    Unexpected any. Specify a different type                                                                                                                                                    @typescript-eslint/no-explicit-any
+  28:56  error    Unexpected any. Specify a different type                                                                                                                                                    @typescript-eslint/no-explicit-any
+  29:64  error    Unexpected any. Specify a different type                                                                                                                                                    @typescript-eslint/no-explicit-any
+  54:8   warning  React Hook useEffect has missing dependencies: 'fetchAnalytics', 'fetchCategoryStats', 'fetchDailyStats', and 'fetchRegistrationStats'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+E:\projects\playqzv3\client\src\pages\admin\Users.tsx
+   57:18  error    'error' is defined but never used                                                                             @typescript-eslint/no-unused-vars
+   67:8   warning  React Hook useEffect has a missing dependency: 'loadUsers'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+   84:18  error    'error' is defined but never used                                                                             @typescript-eslint/no-unused-vars
+   96:18  error    'error' is defined but never used                                                                             @typescript-eslint/no-unused-vars
+  110:18  error    'error' is defined but never used                                                                             @typescript-eslint/no-unused-vars
+
+E:\projects\playqzv3\client\src\pages\user\Dashboard.tsx
+  36:11  error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             @typescript-eslint/no-explicit-any
+  74:24  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+E:\projects\playqzv3\client\src\pages\user\Dashboard.tsx:74:24
+  72 |     useEffect(() => {
+  73 |         const hour = new Date().getHours();
+> 74 |         if (hour < 12) setGreeting('Good morning');
+     |                        ^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  75 |         else if (hour < 18) setGreeting('Good afternoon');
+  76 |         else setGreeting('Good evening');
+  77 |  react-hooks/set-state-in-effect
+
+E:\projects\playqzv3\client\src\pages\user\QuizConfig.tsx
+  106:37  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  131:21  error  Empty block statement                     no-empty
+  145:18  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  147:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\projects\playqzv3\client\src\pages\user\QuizResults.tsx
+   76:31  error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                @typescript-eslint/no-explicit-any
+  105:65  error  Error: Cannot call impure function during render
+
+`Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).
+
+E:\projects\playqzv3\client\src\pages\user\QuizResults.tsx:105:65
+  103 |     }
+  104 |
+> 105 |     const completedAt = new Date(currentAttempt.completed_at || Date.now()).toLocaleString();
+      |                                                                 ^^^^^^^^^^ Cannot call impure function
+  106 |
+  107 |     // Generate a shareable link (placeholder ΓÇô you could use a real route with query params)
+  108 |     const shareLink = `${window.location.origin}/quiz-results/${currentAttempt.id}`;  react-hooks/purity
+
+E:\projects\playqzv3\client\src\stores\authStore.ts
+  19:20  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+E:\projects\playqzv3\client\src\types\index.ts
+  126:31  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+Γ£û 32 problems (27 errors, 5 warnings)
+

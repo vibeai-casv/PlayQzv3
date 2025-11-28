@@ -206,8 +206,7 @@ export function Questions() {
                     </select>
                     <select
                         value={status}
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        onChange={(e) => setStatus(e.target.value as any)}
+                        onChange={(e) => setStatus(e.target.value as 'active' | 'inactive' | 'draft' | '')}
                         className="px-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
                     >
                         <option value="">All Status</option>

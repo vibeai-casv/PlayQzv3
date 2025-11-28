@@ -73,7 +73,7 @@ export function QuizResults() {
     const categoryData = React.useMemo(() => {
         const map: Record<string, { correct: number; total: number }> = {};
         questions.forEach((q) => {
-            const cat = (q as any).category || 'Other';
+            const cat = q.category || 'Other';
             if (!map[cat]) map[cat] = { correct: 0, total: 0 };
             map[cat].total += 1;
             const resp = responses.get(q.id);

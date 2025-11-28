@@ -23,10 +23,10 @@ const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'
 export function AdminDashboard() {
     const { fetchAnalytics, fetchDailyStats, fetchCategoryStats, fetchRegistrationStats } = useAdmin();
     const [loading, setLoading] = useState(true);
-    const [stats, setStats] = useState<any>(null);
-    const [dailyStats, setDailyStats] = useState<any[]>([]);
-    const [categoryStats, setCategoryStats] = useState<any[]>([]);
-    const [registrationStats, setRegistrationStats] = useState<any[]>([]);
+    const [stats, setStats] = useState<{ totalUsers: number; activeUsers: number; totalAttempts: number } | null>(null);
+    const [dailyStats, setDailyStats] = useState<{ date: string; total_attempts: number }[]>([]);
+    const [categoryStats, setCategoryStats] = useState<{ category: string; total_questions: number; accuracy_rate: number }[]>([]);
+    const [registrationStats, setRegistrationStats] = useState<{ date: string; count: number }[]>([]);
 
     useEffect(() => {
         const loadData = async () => {

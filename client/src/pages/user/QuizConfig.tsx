@@ -103,8 +103,8 @@ export function QuizConfig() {
                     .neq('category', null);
                 if (error) throw error;
                 const counts: Record<string, number> = {};
-                data?.forEach((row: any) => {
-                    const cat = row.category as string;
+                data?.forEach((row: { category: string }) => {
+                    const cat = row.category;
                     counts[cat] = (counts[cat] ?? 0) + 1;
                 });
                 setCategoryInfo((prev) =>
@@ -139,13 +139,14 @@ export function QuizConfig() {
         try {
             const config = {
                 numQuestions: Number(data.numQuestions),
-                difficulty: data.difficulty,
+                difficulty: data.difficulty.toLowerCase() as 'easy' | 'medium' | 'hard' | 'mixed',
                 categories: data.categories,
                 timeLimit: Number(data.numQuestions) * 30,
-            } as any;
+                includeExplanations: true,
+            };
             await generateQuiz(config);
-        } catch (e: any) {
-            setStartError(e.message ?? 'Failed to generate quiz');
+        } catch (e) {
+            setStartError(e instanceof Error ? e.message : 'Failed to generate quiz');
         } finally {
             setStartLoading(false);
         }

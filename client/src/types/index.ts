@@ -123,7 +123,7 @@ export interface ActivityLog {
     description: string;
     related_entity_type?: string;
     related_entity_id?: string;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
     ip_address?: string;
     user_agent?: string;
     success: boolean;

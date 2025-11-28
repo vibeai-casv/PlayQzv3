@@ -16,7 +16,8 @@ interface AuthState {
     loginWithGoogle: () => Promise<void>;
     loginWithPhone: (phone: string) => Promise<void>;
     verifyOtp: (phone: string, otp: string) => Promise<void>;
-    signup: (data: any) => Promise<void>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    signup: (data: any) => Promise<void>; // TODO: Use SignupFormData type
     logout: () => Promise<void>;
     checkSession: () => Promise<void>;
     updateProfile: (updates: Partial<User>) => Promise<void>;

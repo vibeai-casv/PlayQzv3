@@ -65,8 +65,9 @@ export const SignupForm: React.FC = () => {
             toast.success('OTP sent to your mobile number');
             setStep('otp');
             setCountdown(60);
-        } catch (error: any) {
-            toast.error(error.message || 'Failed to send OTP');
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : 'Failed to send OTP';
+            toast.error(message);
         } finally {
             setLoading(false);
         }
@@ -127,8 +128,9 @@ export const SignupForm: React.FC = () => {
             toast.success('Account created successfully!');
             // Redirect or handle success (App will auto-redirect based on session)
 
-        } catch (error: any) {
-            toast.error(error.message || 'Invalid OTP');
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : 'Invalid OTP';
+            toast.error(message);
         } finally {
             setLoading(false);
         }

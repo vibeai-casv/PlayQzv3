@@ -20,6 +20,7 @@ export function QuestionEditor({ question, onSave, onCancel }: QuestionEditorPro
     const [showMediaPicker, setShowMediaPicker] = useState(false);
 
     const form = useForm<QuestionFormData>({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         resolver: zodResolver(questionSchema) as any,
         defaultValues: {
             question_text: '',
@@ -36,6 +37,7 @@ export function QuestionEditor({ question, onSave, onCancel }: QuestionEditorPro
     });
 
     const { fields, append, remove } = useFieldArray({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         control: form.control as any,
         name: "options"
     });
@@ -257,8 +259,7 @@ export function QuestionEditor({ question, onSave, onCancel }: QuestionEditorPro
                         className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
                     >
                         <option value="">Select Correct Option</option>
-                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                        {form.watch('options')?.map((opt: any, i: number) => (
+                        {form.watch('options')?.map((opt, i) => (
                             opt && <option key={i} value={opt}>{opt}</option>
                         ))}
                     </select>

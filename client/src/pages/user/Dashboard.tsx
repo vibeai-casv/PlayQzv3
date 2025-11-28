@@ -33,7 +33,7 @@ interface StatCardProps {
     value: number;
     prefix?: string;
     suffix?: string;
-    icon: any;
+    icon: React.ElementType;
     color: string;
     delay: number;
     isLoading?: boolean;
@@ -252,7 +252,7 @@ function DashboardContent() {
                         View All <ArrowRight className="w-4 h-4 ml-1" />
                     </Link>
                 </div>
-                
+
                 {currentQuizzes.length > 0 ? (
                     <>
                         <div className="overflow-x-auto">
@@ -297,7 +297,7 @@ function DashboardContent() {
                                 </tbody>
                             </table>
                         </div>
-                        
+
                         {/* Pagination */}
                         <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between">
                             <p className="text-sm text-gray-500">
