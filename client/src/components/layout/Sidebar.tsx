@@ -63,6 +63,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                     <button
                         onClick={onClose}
                         className="p-1 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 lg:hidden"
+                        aria-label="Close sidebar"
                     >
                         <X className="w-6 h-6" />
                     </button>

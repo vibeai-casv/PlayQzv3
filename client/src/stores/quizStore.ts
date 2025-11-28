@@ -18,7 +18,7 @@ interface QuizState {
     previousQuestion: () => void;
     submitQuiz: () => Promise<void>;
     resetQuiz: () => void;
-    setTimeRemaining: (time: number) => void;
+    setTimeRemaining: (time: number | ((prev: number) => number)) => void;
     setQuiz: (attempt: QuizAttempt, questions: Question[]) => void;
 }
 
@@ -207,7 +207,9 @@ export const useQuizStore = create<QuizState>((set, get) => ({
         });
     },
 
-    setTimeRemaining: (time) => set({ timeRemaining: time }),
+    setTimeRemaining: (time) => set((state) => ({
+        timeRemaining: typeof time === 'function' ? time(state.timeRemaining) : time
+    })),
 
     setQuiz: (attempt, questions) => {
         set({

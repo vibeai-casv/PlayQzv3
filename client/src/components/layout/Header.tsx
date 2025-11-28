@@ -61,6 +61,7 @@ export function Header() {
                                 <Link
                                     to="/profile"
                                     className="flex items-center space-x-2 text-gray-700 hover:text-primary-600"
+                                    aria-label="User profile"
                                 >
                                     <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
                                         <span className="text-primary-600 font-medium text-sm">

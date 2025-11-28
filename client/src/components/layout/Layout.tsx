@@ -24,6 +24,7 @@ export function Layout({ children }: LayoutProps) {
     if (showSidebar) {
         return (
             <div className="min-h-screen bg-gray-50 flex">
+                <a href="#main-content" className="skip-link">Skip to main content</a>
                 <OfflineIndicator />
                 <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
@@ -33,6 +34,7 @@ export function Layout({ children }: LayoutProps) {
                         <button
                             onClick={() => setSidebarOpen(true)}
                             className="p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500"
+                            aria-label="Open sidebar"
                         >
                             <Menu className="h-6 w-6" />
                         </button>
@@ -40,7 +42,7 @@ export function Layout({ children }: LayoutProps) {
                         <div className="w-6" /> {/* Spacer for centering */}
                     </div>
 
-                    <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+                    <main id="main-content" className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8" tabIndex={-1}>
                         {children}
                     </main>
                 </div>
@@ -50,9 +52,10 @@ export function Layout({ children }: LayoutProps) {
 
     return (
         <div className="min-h-screen flex flex-col bg-gray-50">
+            <a href="#main-content" className="skip-link">Skip to main content</a>
             <OfflineIndicator />
             <Header />
-            <main className="flex-grow">
+            <main id="main-content" className="flex-grow" tabIndex={-1}>
                 {children}
             </main>
             <Footer />

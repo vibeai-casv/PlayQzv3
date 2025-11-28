@@ -20,7 +20,6 @@ export function QuestionEditor({ question, onSave, onCancel }: QuestionEditorPro
     const [showMediaPicker, setShowMediaPicker] = useState(false);
 
     const form = useForm<QuestionFormData>({
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         resolver: zodResolver(questionSchema) as any,
         defaultValues: {
             question_text: '',
@@ -37,9 +36,8 @@ export function QuestionEditor({ question, onSave, onCancel }: QuestionEditorPro
     });
 
     const { fields, append, remove } = useFieldArray({
-        control: form.control,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        name: "options" as any
+        control: form.control as any,
+        name: "options"
     });
 
     useEffect(() => {

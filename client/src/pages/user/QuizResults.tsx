@@ -4,7 +4,6 @@ import { CheckCircle, XCircle, Loader2, ArrowLeft, RefreshCw, Share2, X } from '
 import { useQuizStore } from '../../stores/quizStore';
 import { cn } from '../../lib/utils';
 import { toast } from 'sonner';
-import { Skeleton } from '../../components/ui/Skeleton';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import confetti from 'canvas-confetti';
 
@@ -13,18 +12,31 @@ function ShareModal({ open, onClose, link }: { open: boolean; onClose: () => voi
     if (!open) return null;
     return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" role="dialog" aria-modal="true">
-            value={link}
-            className="w-full p-2 border rounded bg-gray-50 dark:bg-gray-900"
-            onClick={(e) => (e.target as HTMLInputElement).select()}
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-sm w-full relative">
+                <button
+                    onClick={onClose}
+                    className="absolute top-2 right-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                >
+                    <X className="w-5 h-5" />
+                </button>
+                <h3 className="text-lg font-bold mb-4 text-gray-900 dark:text-white">Share Results</h3>
+                <input
+                    readOnly
+                    value={link}
+                    className="w-full p-2 border rounded bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white mb-4"
+                    onClick={(e) => (e.target as HTMLInputElement).select()}
                 />
-            <button
-                onClick={() => navigator.clipboard.writeText(link)}
-                className="mt-4 w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700"
-            >
-                Copy to Clipboard
-            </button>
+                <button
+                    onClick={() => {
+                        navigator.clipboard.writeText(link);
+                        toast.success('Copied to clipboard!');
+                    }}
+                    className="w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700 transition-colors"
+                >
+                    Copy to Clipboard
+                </button>
+            </div>
         </div>
-        </div >
     );
 }
 
@@ -163,7 +175,7 @@ export function QuizResults() {
                         return (
                             <details key={q.id} className="border rounded-lg p-3 bg-gray-50 dark:bg-gray-800">
                                 <summary className="font-medium cursor-pointer flex justify-between items-center">
-                                    <span>{idx + 1}. {q.text}</span>
+                                    <span>{idx + 1}. {q.question_text}</span>
                                     <span className={cn('ml-2', isCorrect ? 'text-green-600' : 'text-red-600')}>
                                         {isCorrect ? <CheckCircle className="inline w-4 h-4" /> : <XCircle className="inline w-4 h-4" />}
                                     </span>

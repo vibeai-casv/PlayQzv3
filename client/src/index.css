@@ -99,4 +99,13 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Accessibility Styles */
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-primary-600;
+  }
+
+  .skip-link {
+    @apply absolute -top-96 left-4 z-50 bg-primary-600 text-white px-4 py-2 rounded-md transition-all duration-200 focus:top-4;
+  }
 }

@@ -129,6 +129,10 @@ export interface ActivityLog {
     success: boolean;
     error_message?: string;
     created_at: string;
+    profiles?: {
+        email?: string;
+        name?: string;
+    };
 }
 
 // API Response Types

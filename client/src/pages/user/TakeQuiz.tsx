@@ -1,9 +1,9 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle, XCircle, Loader2, Clock, AlertCircle, X } from 'lucide-react';
+import { XCircle, Loader2, Clock, X } from 'lucide-react';
 import { useQuizStore } from '../../stores/quizStore';
 import { cn } from '../../lib/utils';
-import { Skeleton } from '../../components/ui/Skeleton';
+import { Image } from '../../components/ui/Image';
 
 // Simple modal component for confirmations and image zoom
 function Modal({ open, onClose, children }: { open: boolean; onClose: () => void; children: React.ReactNode }) {
@@ -43,7 +43,6 @@ export function TakeQuiz() {
     const [showSubmitModal, setShowSubmitModal] = useState(false);
     const [showImageModal, setShowImageModal] = useState(false);
     const [imageSrc, setImageSrc] = useState('');
-    const [loadingImage, setLoadingImage] = useState(true);
 
     const currentQuestion = questions[currentQuestionIndex];
     const totalQuestions = questions.length;
@@ -73,7 +72,7 @@ export function TakeQuiz() {
             if (!currentQuestion) return;
             const key = parseInt(e.key, 10);
             if (key >= 1 && key <= 4) {
-                const option = currentQuestion.options[key - 1];
+                const option = currentQuestion.options?.[key - 1];
                 if (option) {
                     const start = performance.now();
                     submitAnswer(currentQuestion.id, option, Math.round(performance.now() - start) / 1000);
@@ -89,14 +88,10 @@ export function TakeQuiz() {
     }, [handleKeyDown]);
 
     // Handle answer click
-    const onSelectOption = (option: string) => {
+    const onSelectOption = useCallback((option: string) => {
         const start = performance.now();
         submitAnswer(currentQuestion.id, option, Math.round(performance.now() - start) / 1000);
-    };
-
-    // Image handling
-    const onImageLoad = () => setLoadingImage(false);
-    const onImageError = () => setLoadingImage(false);
+    }, [currentQuestion, submitAnswer]);
 
     const openImage = (src: string) => {
         setImageSrc(src);
@@ -155,22 +150,19 @@ export function TakeQuiz() {
             {/* Question Card */}
             <section className="bg-white dark:bg-gray-900 rounded-xl shadow p-6 space-y-4">
                 <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">
-                    {currentQuestion.text}
+                    {currentQuestion.question_text}
                 </h2>
                 {currentQuestion.image_url && (
                     <div className="relative w-full max-h-80 overflow-hidden rounded-lg cursor-pointer" onClick={() => openImage(currentQuestion.image_url!)}>
-                        {loadingImage && <Skeleton className="absolute inset-0" />}
-                        <img
+                        <Image
                             src={currentQuestion.image_url}
                             alt="Question illustration"
                             className="w-full h-auto object-contain"
-                            onLoad={onImageLoad}
-                            onError={onImageError}
                         />
                     </div>
                 )}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {currentQuestion.options.map((opt, idx) => (
+                    {currentQuestion.options?.map((opt, idx) => (
                         <button
                             key={opt}
                             ref={idx === 0 ? firstOptionRef : undefined}
