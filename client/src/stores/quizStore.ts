@@ -19,6 +19,7 @@ interface QuizState {
     submitQuiz: () => Promise<void>;
     resetQuiz: () => void;
     setTimeRemaining: (time: number) => void;
+    setQuiz: (attempt: QuizAttempt, questions: Question[]) => void;
 }
 
 export const useQuizStore = create<QuizState>((set, get) => ({
@@ -207,4 +208,15 @@ export const useQuizStore = create<QuizState>((set, get) => ({
     },
 
     setTimeRemaining: (time) => set({ timeRemaining: time }),
+
+    setQuiz: (attempt, questions) => {
+        set({
+            currentAttempt: attempt,
+            questions: questions,
+            responses: new Map(),
+            currentQuestionIndex: 0,
+            timeRemaining: attempt.config.timeLimit || 0,
+            isLoading: false,
+        });
+    },
 }));

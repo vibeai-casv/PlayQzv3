@@ -1,5 +1,8 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, PlayCircle, History, User, LogOut, X } from 'lucide-react';
+import {
+    LayoutDashboard, PlayCircle, History, User, LogOut, X,
+    Users, FileQuestion, Image as ImageIcon, Settings, Activity
+} from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { cn } from '../../lib/utils';
 
@@ -10,14 +13,25 @@ interface SidebarProps {
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
     const location = useLocation();
-    const { logout } = useAuth();
+    const { logout, isAdmin } = useAuth();
 
-    const navigation = [
+    const userNavigation = [
         { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
         { name: 'Take Quiz', href: '/take-quiz', icon: PlayCircle },
         { name: 'History', href: '/history', icon: History },
         { name: 'Profile', href: '/profile', icon: User },
     ];
+
+    const adminNavigation = [
+        { name: 'Overview', href: '/admin', icon: LayoutDashboard },
+        { name: 'Users', href: '/admin/users', icon: Users },
+        { name: 'Questions', href: '/admin/questions', icon: FileQuestion },
+        { name: 'Media Library', href: '/admin/media', icon: ImageIcon },
+        { name: 'Activity Logs', href: '/admin/activity', icon: Activity },
+        { name: 'Settings', href: '/admin/settings', icon: Settings },
+    ];
+
+    const navigation = isAdmin ? adminNavigation : userNavigation;
 
     const isActive = (path: string) => location.pathname === path;
 

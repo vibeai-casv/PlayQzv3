@@ -21,10 +21,13 @@ export const LoginForm: React.FC = () => {
     });
 
     useEffect(() => {
+        let timer: NodeJS.Timeout;
         if (countdown > 0) {
-            const timer = setTimeout(() => setCountdown(c => c - 1), 1000);
-            return () => clearTimeout(timer);
+            timer = setTimeout(() => setCountdown(c => c - 1), 1000);
         }
+        return () => {
+            if (timer) clearTimeout(timer);
+        };
     }, [countdown]);
 
     const handleGoogleLogin = async () => {

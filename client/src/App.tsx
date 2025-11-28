@@ -21,6 +21,9 @@ import { AdminDashboard } from './pages/admin/Dashboard';
 import { Users } from './pages/admin/Users';
 import { Questions } from './pages/admin/Questions';
 import { Media } from './pages/admin/Media';
+import { ActivityLogs } from './pages/admin/ActivityLogs';
+
+import { ErrorBoundary } from './components/ui/ErrorBoundary';
 
 function App() {
   const { initialize } = useAuth();
@@ -32,95 +35,105 @@ function App() {
   return (
     <BrowserRouter>
       <Toaster position="top-center" richColors />
-      <Layout>
-        <Routes>
-          {/* Public Routes */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
+      <ErrorBoundary>
+        <Layout>
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
 
-          {/* Protected User Routes */}
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/quiz-config"
-            element={
-              <ProtectedRoute>
-                <QuizConfig />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/take-quiz"
-            element={
-              <ProtectedRoute>
-                <TakeQuiz />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/history"
-            element={
-              <ProtectedRoute>
-                <History />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/profile"
-            element={
-              <ProtectedRoute>
-                <Profile />
-              </ProtectedRoute>
-            }
-          />
+            {/* Protected User Routes */}
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/quiz-config"
+              element={
+                <ProtectedRoute>
+                  <QuizConfig />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/take-quiz"
+              element={
+                <ProtectedRoute>
+                  <TakeQuiz />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/history"
+              element={
+                <ProtectedRoute>
+                  <History />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <Profile />
+                </ProtectedRoute>
+              }
+            />
 
-          {/* Protected Admin Routes */}
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute requireAdmin>
-                <AdminDashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/users"
-            element={
-              <ProtectedRoute requireAdmin>
-                <Users />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/questions"
-            element={
-              <ProtectedRoute requireAdmin>
-                <Questions />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/media"
-            element={
-              <ProtectedRoute requireAdmin>
-                <Media />
-              </ProtectedRoute>
-            }
-          />
+            {/* Protected Admin Routes */}
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute requireAdmin>
+                  <AdminDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/users"
+              element={
+                <ProtectedRoute requireAdmin>
+                  <Users />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/questions"
+              element={
+                <ProtectedRoute requireAdmin>
+                  <Questions />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/media"
+              element={
+                <ProtectedRoute requireAdmin>
+                  <Media />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/activity"
+              element={
+                <ProtectedRoute requireAdmin>
+                  <ActivityLogs />
+                </ProtectedRoute>
+              }
+            />
 
-          {/* Default Route */}
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            {/* Default Route */}
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
-          {/* 404 */}
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
-        </Routes>
-      </Layout>
+            {/* 404 */}
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </Routes>
+        </Layout>
+      </ErrorBoundary>
     </BrowserRouter>
   );
 }

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import type { User, Question, MediaFile, AnalyticsData } from '../types';
+import { User, Question, MediaFile, AnalyticsData, ActivityLog } from '../types';
 
 export function useAdmin() {
     const [isLoading, setIsLoading] = useState(false);
@@ -53,6 +53,58 @@ export function useAdmin() {
             if (error) throw error;
 
             return { users: data as User[], total: count || 0 };
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : 'An error occurred';
+            setError(message);
+            throw err;
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const fetchActivityLogs = async (filters?: {
+        type?: string;
+        userId?: string;
+        startDate?: Date;
+        endDate?: Date;
+        search?: string;
+        limit?: number;
+        offset?: number;
+    }) => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            let query = supabase
+                .from('activity_logs')
+                .select('*, profiles:user_id(name, email)', { count: 'exact' });
+
+            if (filters?.type) {
+                query = query.eq('activity_type', filters.type);
+            }
+            if (filters?.userId) {
+                query = query.eq('user_id', filters.userId);
+            }
+            if (filters?.startDate) {
+                query = query.gte('created_at', filters.startDate.toISOString());
+            }
+            if (filters?.endDate) {
+                query = query.lte('created_at', filters.endDate.toISOString());
+            }
+            if (filters?.search) {
+                query = query.or(`description.ilike.%${filters.search}%,metadata.ilike.%${filters.search}%`);
+            }
+            if (filters?.limit) {
+                query = query.limit(filters.limit);
+            }
+            if (filters?.offset) {
+                query = query.range(filters.offset, filters.offset + (filters.limit || 20) - 1);
+            }
+
+            const { data, error, count } = await query.order('created_at', { ascending: false });
+
+            if (error) throw error;
+
+            return { logs: data as (ActivityLog & { profiles: { name: string; email: string } | null })[], total: count || 0 };
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : 'An error occurred';
             setError(message);
@@ -145,37 +197,44 @@ export function useAdmin() {
     const fetchQuestions = async (filters?: {
         category?: string;
         difficulty?: string;
+        type?: string;
+        status?: 'active' | 'inactive' | 'draft';
+        ai_generated?: boolean;
         search?: string;
         limit?: number;
         offset?: number;
+        sortBy?: string;
+        sortOrder?: 'asc' | 'desc';
     }) => {
         setIsLoading(true);
         setError(null);
         try {
             let query = supabase.from('questions').select('*', { count: 'exact' });
 
-            if (filters?.category) {
-                query = query.eq('category', filters.category);
-            }
-            if (filters?.difficulty) {
-                query = query.eq('difficulty', filters.difficulty);
-            }
+            if (filters?.category) query = query.eq('category', filters.category);
+            if (filters?.difficulty) query = query.eq('difficulty', filters.difficulty);
+            if (filters?.type) query = query.eq('question_type', filters.type);
+            if (filters?.status) query = query.eq('status', filters.status);
+            if (filters?.ai_generated !== undefined) query = query.eq('ai_generated', filters.ai_generated);
+
             if (filters?.search) {
                 query = query.or(`question_text.ilike.%${filters.search}%,explanation.ilike.%${filters.search}%`);
             }
-            if (filters?.limit) {
-                query = query.limit(filters.limit);
-            }
+            if (filters?.limit) query = query.limit(filters.limit);
             if (filters?.offset) {
                 query = query.range(filters.offset, filters.offset + (filters.limit || 20) - 1);
             }
 
-            const { data, error, count } = await query;
+            const { data, error, count } = await query.order(filters?.sortBy || 'created_at', {
+                ascending: filters?.sortOrder === 'asc'
+            });
+
             if (error) throw error;
 
             return { questions: data as Question[], total: count || 0 };
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : 'An error occurred';
+            setError(message);
             throw err;
         } finally {
             setIsLoading(false);
@@ -194,8 +253,9 @@ export function useAdmin() {
 
             if (error) throw error;
             return data as Question;
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : 'An error occurred';
+            setError(message);
             throw err;
         } finally {
             setIsLoading(false);
@@ -215,8 +275,9 @@ export function useAdmin() {
 
             if (error) throw error;
             return data as Question;
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : 'An error occurred';
+            setError(message);
             throw err;
         } finally {
             setIsLoading(false);
@@ -227,15 +288,45 @@ export function useAdmin() {
         setIsLoading(true);
         setError(null);
         try {
-            const { error } = await supabase.from('questions').delete().eq('id', id);
+            const { error } = await supabase
+                .from('questions')
+                .delete()
+                .eq('id', id);
+
             if (error) throw error;
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : 'An error occurred';
+            setError(message);
             throw err;
         } finally {
             setIsLoading(false);
         }
     };
+
+    const generateQuestions = async (params: {
+        topic: string;
+        count: number;
+        difficulty: string;
+        type: string;
+    }) => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const { data, error } = await supabase.functions.invoke('generate-questions', {
+                body: params
+            });
+
+            if (error) throw error;
+            return data;
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : 'An error occurred';
+            setError(message);
+            throw err;
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
 
     // Media Management
     const fetchMedia = async (filters?: {
@@ -262,8 +353,9 @@ export function useAdmin() {
             if (error) throw error;
 
             return { media: data as MediaFile[], total: count || 0 };
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : 'An error occurred';
+            setError(message);
             throw err;
         } finally {
             setIsLoading(false);
@@ -304,8 +396,9 @@ export function useAdmin() {
 
             if (error) throw error;
             return data;
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : 'An error occurred';
+            setError(message);
             throw err;
         } finally {
             setIsLoading(false);
@@ -318,8 +411,9 @@ export function useAdmin() {
         try {
             const { error } = await supabase.from('media_library').delete().eq('id', id);
             if (error) throw error;
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : 'An error occurred';
+            setError(message);
             throw err;
         } finally {
             setIsLoading(false);
@@ -338,8 +432,9 @@ export function useAdmin() {
 
             if (error) throw error;
             return data as AnalyticsData;
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : 'An error occurred';
+            setError(message);
             throw err;
         } finally {
             setIsLoading(false);
@@ -356,7 +451,7 @@ export function useAdmin() {
                 .limit(30);
             if (error) throw error;
             return data;
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Error fetching daily stats:', err);
             return [];
         } finally {
@@ -372,7 +467,7 @@ export function useAdmin() {
                 .select('*');
             if (error) throw error;
             return data;
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Error fetching category stats:', err);
             return [];
         } finally {
@@ -403,7 +498,7 @@ export function useAdmin() {
             });
 
             return Object.entries(stats).map(([date, count]) => ({ date, count }));
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Error fetching registration stats:', err);
             return [];
         } finally {
@@ -418,6 +513,7 @@ export function useAdmin() {
         // User Management
         fetchUsers,
         fetchUserActivity,
+        fetchActivityLogs,
         toggleUserStatus,
 
         // Question Management
@@ -425,6 +521,7 @@ export function useAdmin() {
         createQuestion,
         updateQuestion,
         deleteQuestion,
+        generateQuestions,
 
         // Media Management
         fetchMedia,

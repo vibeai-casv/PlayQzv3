@@ -10,6 +10,8 @@ interface LayoutProps {
     children: React.ReactNode;
 }
 
+import { OfflineIndicator } from '../ui/OfflineIndicator';
+
 export function Layout({ children }: LayoutProps) {
     const { isAuthenticated } = useAuth();
     const location = useLocation();
@@ -22,6 +24,7 @@ export function Layout({ children }: LayoutProps) {
     if (showSidebar) {
         return (
             <div className="min-h-screen bg-gray-50 flex">
+                <OfflineIndicator />
                 <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
                 <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -47,6 +50,7 @@ export function Layout({ children }: LayoutProps) {
 
     return (
         <div className="min-h-screen flex flex-col bg-gray-50">
+            <OfflineIndicator />
             <Header />
             <main className="flex-grow">
                 {children}

@@ -48,11 +48,7 @@ export interface Question {
     subcategory?: string;
     tags?: string[];
     points: number;
-    time_limit_seconds?: number;
-    is_active: boolean;
-    is_verified: boolean;
-    usage_count: number;
-    correct_count: number;
+    status: 'active' | 'inactive' | 'draft';
     ai_generated: boolean;
     created_at: string;
     updated_at: string;
