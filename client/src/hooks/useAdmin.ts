@@ -10,9 +10,13 @@ export function useAdmin() {
     const fetchUsers = async (filters?: {
         status?: 'active' | 'disabled';
         category?: string;
+        district?: string;
+        role?: 'user' | 'admin';
         search?: string;
         limit?: number;
         offset?: number;
+        sortBy?: string;
+        sortOrder?: 'asc' | 'desc';
     }) => {
         setIsLoading(true);
         setError(null);
@@ -25,9 +29,15 @@ export function useAdmin() {
             if (filters?.category) {
                 query = query.eq('category', filters.category);
             }
+            if (filters?.district) {
+                query = query.eq('district', filters.district);
+            }
+            if (filters?.role) {
+                query = query.eq('role', filters.role);
+            }
             if (filters?.search) {
                 query = query.or(
-                    `name.ilike.%${filters.search}%,email.ilike.%${filters.search}%,institution.ilike.%${filters.search}%`
+                    `name.ilike.%${filters.search}%,email.ilike.%${filters.search}%,institution.ilike.%${filters.search}%,phone.ilike.%${filters.search}%`
                 );
             }
             if (filters?.limit) {
@@ -37,12 +47,62 @@ export function useAdmin() {
                 query = query.range(filters.offset, filters.offset + (filters.limit || 20) - 1);
             }
 
-            const { data, error, count } = await query;
+            const { data, error, count } = await query.order(filters?.sortBy || 'created_at', {
+                ascending: filters?.sortOrder === 'asc'
+            });
             if (error) throw error;
 
             return { users: data as User[], total: count || 0 };
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : 'An error occurred';
+            setError(message);
+            throw err;
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const fetchUserActivity = async (userId: string) => {
+        setIsLoading(true);
+        try {
+            // Fetch login history
+            const { data: logins, error: loginError } = await supabase
+                .from('activity_logs')
+                .select('*')
+                .eq('user_id', userId)
+                .eq('activity_type', 'login')
+                .order('created_at', { ascending: false })
+                .limit(10);
+
+            if (loginError) throw loginError;
+
+            // Fetch quiz attempts
+            const { data: attempts, error: attemptsError } = await supabase
+                .from('quiz_attempts')
+                .select('*')
+                .eq('user_id', userId)
+                .order('started_at', { ascending: false })
+                .limit(10);
+
+            if (attemptsError) throw attemptsError;
+
+            // Fetch recent activity (all types)
+            const { data: activity, error: activityError } = await supabase
+                .from('activity_logs')
+                .select('*')
+                .eq('user_id', userId)
+                .order('created_at', { ascending: false })
+                .limit(20);
+
+            if (activityError) throw activityError;
+
+            return {
+                logins: logins || [],
+                attempts: attempts || [],
+                activity: activity || []
+            };
+        } catch (err: unknown) {
+            console.error('Error fetching user activity:', err);
             throw err;
         } finally {
             setIsLoading(false);
@@ -59,8 +119,22 @@ export function useAdmin() {
                 .eq('id', userId);
 
             if (error) throw error;
-        } catch (err: any) {
-            setError(err.message);
+
+            // Log activity
+            const { error: logError } = await supabase
+                .from('activity_logs')
+                .insert({
+                    user_id: userId,
+                    activity_type: disabled ? 'account_disabled' : 'account_enabled',
+                    description: `User account was ${disabled ? 'disabled' : 'enabled'} by admin`,
+                    metadata: { reason }
+                });
+
+            if (logError) console.error('Failed to log activity:', logError);
+
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : 'An error occurred';
+            setError(message);
             throw err;
         } finally {
             setIsLoading(false);
@@ -343,6 +417,7 @@ export function useAdmin() {
 
         // User Management
         fetchUsers,
+        fetchUserActivity,
         toggleUserStatus,
 
         // Question Management
