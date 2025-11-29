@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrainCircuit } from 'lucide-react';
+
 
 interface AuthLayoutProps {
     children: React.ReactNode;
