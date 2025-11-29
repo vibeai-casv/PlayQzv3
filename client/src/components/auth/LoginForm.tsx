@@ -1,34 +1,24 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
-import { Loader2, Smartphone, ArrowRight } from 'lucide-react';
+import { Loader2, ArrowRight } from 'lucide-react';
 import { loginSchema, type LoginFormData } from '../../lib/validations/auth';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
 
 export const LoginForm: React.FC = () => {
-    const [step, setStep] = useState<'credentials' | 'otp'>('credentials');
     const [loading, setLoading] = useState(false);
-    const [countdown, setCountdown] = useState(0);
     const { signInWithGoogle } = useAuth();
 
     const form = useForm<LoginFormData>({
         resolver: zodResolver(loginSchema),
         defaultValues: {
             rememberMe: false,
+            identifier: '',
+            password: '',
         },
     });
-
-    useEffect(() => {
-        let timer: NodeJS.Timeout;
-        if (countdown > 0) {
-            timer = setTimeout(() => setCountdown(c => c - 1), 1000);
-        }
-        return () => {
-            if (timer) clearTimeout(timer);
-        };
-    }, [countdown]);
 
     const handleGoogleLogin = async () => {
         try {
@@ -40,59 +30,38 @@ export const LoginForm: React.FC = () => {
         }
     };
 
-    const [loginMethod, setLoginMethod] = useState<'phone' | 'email'>('phone');
-
     const onSubmit = async (data: LoginFormData) => {
         try {
             setLoading(true);
+            let emailToUse = data.identifier;
 
-            if (loginMethod === 'phone' && data.phone) {
-                // Phone Login Flow
-                const { error } = await supabase.auth.signInWithOtp({
-                    phone: `+91${data.phone}`,
-                });
+            // Check if identifier is a phone number (simple check: starts with digit or +)
+            const isPhone = /^\+?[0-9]+$/.test(data.identifier);
 
-                if (error) throw error;
+            if (isPhone) {
+                // Lookup email by phone
+                const { data: emailData, error: lookupError } = await supabase
+                    .rpc('get_email_by_phone', { p_phone: data.identifier });
 
-                toast.success('OTP sent to your mobile number');
-                setStep('otp');
-                setCountdown(60);
-            } else if (loginMethod === 'email' && data.email && data.password) {
-                // Email/Password Login
-                const { error } = await supabase.auth.signInWithPassword({
-                    email: data.email,
-                    password: data.password,
-                });
-
-                if (error) throw error;
-
-                toast.success('Welcome back!');
-                // Auth state listener will handle redirect
+                if (lookupError) throw lookupError;
+                if (!emailData) {
+                    throw new Error('No account found with this mobile number');
+                }
+                emailToUse = emailData;
             }
-        } catch (error: unknown) {
-            const message = error instanceof Error ? error.message : 'Failed to sign in';
-            toast.error(message);
-        } finally {
-            setLoading(false);
-        }
-    };
 
-    const onVerifyOtp = async (otp: string) => {
-        try {
-            setLoading(true);
-            const phone = form.getValues('phone');
-
-            const { error } = await supabase.auth.verifyOtp({
-                phone: `+91${phone}`,
-                token: otp,
-                type: 'sms',
+            // Sign in with Email & Password
+            const { error } = await supabase.auth.signInWithPassword({
+                email: emailToUse,
+                password: data.password,
             });
 
             if (error) throw error;
-            toast.success('Welcome back!');
 
+            toast.success('Welcome back!');
+            // Auth state listener will handle redirect
         } catch (error: unknown) {
-            const message = error instanceof Error ? error.message : 'Invalid OTP';
+            const message = error instanceof Error ? error.message : 'Failed to sign in';
             toast.error(message);
         } finally {
             setLoading(false);
@@ -110,148 +79,75 @@ export const LoginForm: React.FC = () => {
                 </p>
             </div>
 
-            {step === 'credentials' ? (
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                    {/* Login Method Toggle */}
-                    <div className="flex p-1 bg-zinc-100 dark:bg-zinc-800 rounded-xl mb-6">
-                        <button
-                            type="button"
-                            onClick={() => setLoginMethod('phone')}
-                            className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${loginMethod === 'phone'
-                                    ? 'bg-white dark:bg-zinc-700 text-indigo-600 shadow-sm'
-                                    : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
-                                }`}
-                        >
-                            Mobile Number
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setLoginMethod('email')}
-                            className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${loginMethod === 'email'
-                                    ? 'bg-white dark:bg-zinc-700 text-indigo-600 shadow-sm'
-                                    : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
-                                }`}
-                        >
-                            Email & Password
-                        </button>
-                    </div>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
 
-                    {loginMethod === 'phone' ? (
-                        <div>
-                            <div className="relative">
-                                <span className="absolute left-4 top-3.5 text-zinc-400">+91</span>
-                                <input
-                                    {...form.register('phone')}
-                                    placeholder="Mobile Number"
-                                    className="w-full pl-12 pr-4 py-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                                />
-                            </div>
-                            {form.formState.errors.phone && (
-                                <p className="text-xs text-red-500 mt-1 ml-1">{form.formState.errors.phone.message}</p>
-                            )}
-                        </div>
-                    ) : (
-                        <div className="space-y-4">
-                            <div>
-                                <input
-                                    {...form.register('email')}
-                                    type="email"
-                                    placeholder="Email Address"
-                                    className="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                                />
-                                {form.formState.errors.email && (
-                                    <p className="text-xs text-red-500 mt-1 ml-1">{form.formState.errors.email.message}</p>
-                                )}
-                            </div>
-                            <div>
-                                <input
-                                    {...form.register('password')}
-                                    type="password"
-                                    placeholder="Password"
-                                    className="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                                />
-                                {form.formState.errors.password && (
-                                    <p className="text-xs text-red-500 mt-1 ml-1">{form.formState.errors.password.message}</p>
-                                )}
-                            </div>
-                        </div>
-                    )}
-
-                    <div className="flex items-center justify-between">
-                        <label className="flex items-center gap-2 cursor-pointer">
-                            <input
-                                type="checkbox"
-                                {...form.register('rememberMe')}
-                                className="rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500"
-                            />
-                            <span className="text-sm text-zinc-600 dark:text-zinc-400">Remember me</span>
-                        </label>
-                    </div>
-
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white py-3.5 rounded-xl font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-indigo-500/20"
-                    >
-                        {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (
-                            <>
-                                {loginMethod === 'phone' ? 'Sign In with OTP' : 'Sign In'} <ArrowRight className="w-4 h-4" />
-                            </>
-                        )}
-                    </button>
-
-                    <div className="relative my-6">
-                        <div className="absolute inset-0 flex items-center">
-                            <div className="w-full border-t border-zinc-200 dark:border-zinc-800"></div>
-                        </div>
-                        <div className="relative flex justify-center text-sm">
-                            <span className="px-2 bg-white dark:bg-black text-zinc-500">Or continue with</span>
-                        </div>
-                    </div>
-
-                    <button
-                        type="button"
-                        onClick={handleGoogleLogin}
-                        disabled={loading}
-                        className="w-full flex items-center justify-center gap-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 py-3.5 rounded-xl font-medium transition-all"
-                    >
-                        <GoogleIcon className="w-5 h-5" />
-                        Google
-                    </button>
-                </form>
-            ) : (
-                <div className="space-y-6 animate-in slide-in-from-right duration-300">
-                    <div className="bg-indigo-50 dark:bg-indigo-900/20 p-6 rounded-2xl border border-indigo-100 dark:border-indigo-800/50 text-center space-y-2">
-                        <Smartphone className="w-10 h-10 text-indigo-600 mx-auto mb-2" />
-                        <h3 className="font-semibold text-zinc-900 dark:text-white">Verify Mobile Number</h3>
-                        <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                            Enter the OTP sent to +91 {form.getValues('phone')}
-                        </p>
-                    </div>
-
-                    <OTPInput onComplete={onVerifyOtp} loading={loading} />
-
-                    <div className="text-center">
-                        {countdown > 0 ? (
-                            <p className="text-sm text-zinc-500">Resend OTP in {countdown}s</p>
-                        ) : (
-                            <button
-                                onClick={() => onSubmit(form.getValues())}
-                                className="text-sm text-indigo-600 hover:underline font-medium"
-                            >
-                                Resend OTP
-                            </button>
+                <div className="space-y-4">
+                    <div>
+                        <input
+                            {...form.register('identifier')}
+                            placeholder="Email or Mobile Number"
+                            className="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                        />
+                        {form.formState.errors.identifier && (
+                            <p className="text-xs text-red-500 mt-1 ml-1">{form.formState.errors.identifier.message}</p>
                         )}
                     </div>
-
-                    <button
-                        onClick={() => setStep('credentials')}
-                        className="w-full text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300"
-                    >
-                        Change Number
-                    </button>
+                    <div>
+                        <input
+                            {...form.register('password')}
+                            type="password"
+                            placeholder="Password"
+                            className="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                        />
+                        {form.formState.errors.password && (
+                            <p className="text-xs text-red-500 mt-1 ml-1">{form.formState.errors.password.message}</p>
+                        )}
+                    </div>
                 </div>
-            )}
+
+                <div className="flex items-center justify-between">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            {...form.register('rememberMe')}
+                            className="rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500"
+                        />
+                        <span className="text-sm text-zinc-600 dark:text-zinc-400">Remember me</span>
+                    </label>
+                    <a href="#" className="text-sm text-indigo-600 hover:underline">Forgot password?</a>
+                </div>
+
+                <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white py-3.5 rounded-xl font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-indigo-500/20"
+                >
+                    {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (
+                        <>
+                            Sign In <ArrowRight className="w-4 h-4" />
+                        </>
+                    )}
+                </button>
+
+                <div className="relative my-6">
+                    <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-zinc-200 dark:border-zinc-800"></div>
+                    </div>
+                    <div className="relative flex justify-center text-sm">
+                        <span className="px-2 bg-white dark:bg-black text-zinc-500">Or continue with</span>
+                    </div>
+                </div>
+
+                <button
+                    type="button"
+                    onClick={handleGoogleLogin}
+                    disabled={loading}
+                    className="w-full flex items-center justify-center gap-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-200 py-3.5 rounded-xl font-medium transition-all"
+                >
+                    <GoogleIcon className="w-5 h-5" />
+                    Google
+                </button>
+            </form>
         </div>
     );
 };
@@ -277,54 +173,3 @@ const GoogleIcon = ({ className }: { className?: string }) => (
         />
     </svg>
 );
-
-const OTPInput = ({ onComplete, loading }: { onComplete: (otp: string) => void, loading: boolean }) => {
-    const [otp, setOtp] = useState(['', '', '', '', '', '']);
-
-    const handleChange = (element: HTMLInputElement, index: number) => {
-        if (isNaN(Number(element.value))) return false;
-
-        setOtp([...otp.map((d, idx) => (idx === index ? element.value : d))]);
-
-        if (element.value !== '') {
-            const nextElement = element.nextElementSibling as HTMLInputElement;
-            if (nextElement) nextElement.focus();
-        }
-    };
-
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, index: number) => {
-        if (e.key === 'Backspace' && otp[index] === '' && index > 0) {
-            const prevElement = (e.target as HTMLInputElement).previousElementSibling as HTMLInputElement;
-            if (prevElement) {
-                prevElement.focus();
-                const newOtp = [...otp];
-                newOtp[index - 1] = '';
-                setOtp(newOtp);
-            }
-        }
-    };
-
-    useEffect(() => {
-        if (otp.every(d => d !== '')) {
-            onComplete(otp.join(''));
-        }
-    }, [otp]);
-
-    return (
-        <div className="flex gap-2 justify-center">
-            {otp.map((data, index) => (
-                <input
-                    key={index}
-                    type="text"
-                    maxLength={1}
-                    value={data}
-                    disabled={loading}
-                    onChange={e => handleChange(e.target, index)}
-                    onKeyDown={e => handleKeyDown(e, index)}
-                    onFocus={e => e.target.select()}
-                    className="w-12 h-14 text-center text-xl font-bold rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                />
-            ))}
-        </div>
-    );
-};
