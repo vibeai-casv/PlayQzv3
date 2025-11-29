@@ -43,12 +43,16 @@ export const useQuizStore = create<QuizState>((set, get) => ({
 
             if (error) throw error;
 
+            if (!data || data.length === 0 || !data[0].question_ids) {
+                throw new Error('Failed to generate quiz: No questions found matching criteria');
+            }
+
             // Create a new quiz attempt
             const { data: attempt, error: attemptError } = await supabase
                 .from('quiz_attempts')
                 .insert({
                     config,
-                    question_ids: data.question_ids,
+                    question_ids: data[0].question_ids,
                     total_questions: config.numQuestions,
                     status: 'in_progress',
                 })
@@ -61,7 +65,7 @@ export const useQuizStore = create<QuizState>((set, get) => ({
             const { data: questions, error: questionsError } = await supabase
                 .from('questions')
                 .select('*')
-                .in('id', data.question_ids);
+                .in('id', data[0].question_ids);
 
             if (questionsError) throw questionsError;
 
