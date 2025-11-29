@@ -25,6 +25,7 @@ const Users = lazy(() => import('./pages/admin/Users').then(module => ({ default
 const Questions = lazy(() => import('./pages/admin/Questions').then(module => ({ default: module.Questions })));
 const Media = lazy(() => import('./pages/admin/Media').then(module => ({ default: module.Media })));
 const ActivityLogs = lazy(() => import('./pages/admin/ActivityLogs').then(module => ({ default: module.ActivityLogs })));
+const SystemTools = lazy(() => import('./pages/admin/SystemTools').then(module => ({ default: module.SystemTools })));
 
 function App() {
   const { initialize } = useAuth();
@@ -124,6 +125,14 @@ function App() {
                 element={
                   <ProtectedRoute requireAdmin>
                     <ActivityLogs />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/system"
+                element={
+                  <ProtectedRoute requireAdmin>
+                    <SystemTools />
                   </ProtectedRoute>
                 }
               />

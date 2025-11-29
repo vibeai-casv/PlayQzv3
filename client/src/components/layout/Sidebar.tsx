@@ -28,7 +28,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         { name: 'Questions', href: '/admin/questions', icon: FileQuestion },
         { name: 'Media Library', href: '/admin/media', icon: ImageIcon },
         { name: 'Activity Logs', href: '/admin/activity', icon: Activity },
-        { name: 'Settings', href: '/admin/settings', icon: Settings },
+        { name: 'System Tools', href: '/admin/system', icon: Settings },
     ];
 
     const navigation = isAdmin ? adminNavigation : userNavigation;
