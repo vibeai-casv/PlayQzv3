@@ -1,7 +1,7 @@
 # Deployment Guide
 
 This guide outlines the steps to deploy the AI Quiz Application to production.
-
+ 
 ## 1. Environment Variables
 
 Ensure the following environment variables are set in your deployment environment (e.g., Vercel, Netlify).
