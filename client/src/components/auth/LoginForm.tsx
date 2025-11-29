@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
 import { Loader2, ArrowRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { loginSchema, type LoginFormData } from '../../lib/validations/auth';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../hooks/useAuth';
@@ -10,6 +11,7 @@ import { useAuth } from '../../hooks/useAuth';
 export const LoginForm: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const { signInWithGoogle } = useAuth();
+    const navigate = useNavigate();
 
     const form = useForm<LoginFormData>({
         resolver: zodResolver(loginSchema),
@@ -59,7 +61,7 @@ export const LoginForm: React.FC = () => {
             if (error) throw error;
 
             toast.success('Welcome back!');
-            // Auth state listener will handle redirect
+            navigate('/dashboard');
         } catch (error: unknown) {
             const message = error instanceof Error ? error.message : 'Failed to sign in';
             toast.error(message);
