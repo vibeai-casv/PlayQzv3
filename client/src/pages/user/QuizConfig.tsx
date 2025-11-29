@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -90,6 +91,7 @@ export function QuizConfig() {
     const [startLoading, setStartLoading] = useState(false);
     const [startError, setStartError] = useState<string | null>(null);
 
+    const navigate = useNavigate();
     const { generateQuiz } = useQuiz();
 
     // Load available question counts per category on mount
@@ -145,6 +147,7 @@ export function QuizConfig() {
                 includeExplanations: true,
             };
             await generateQuiz(config);
+            navigate('/take-quiz');
         } catch (e) {
             setStartError(e instanceof Error ? e.message : 'Failed to generate quiz');
         } finally {
