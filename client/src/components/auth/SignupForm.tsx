@@ -13,13 +13,17 @@ export const SignupForm: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [showDisclaimer, setShowDisclaimer] = useState(false);
     const [countdown, setCountdown] = useState(0);
+    const [signupMethod, setSignupMethod] = useState<'phone' | 'email'>('phone');
     const { signInWithGoogle } = useAuth();
 
     const form = useForm<SignupFormData>({
         resolver: zodResolver(signupSchema),
         defaultValues: {
             category: 'student',
-            terms_accepted: undefined, // Must be explicitly true
+            terms_accepted: undefined,
+            mobile_number: '',
+            email: '',
+            password: '',
         },
     });
 
@@ -45,28 +49,72 @@ export const SignupForm: React.FC = () => {
         }
     };
 
+    const createProfile = async (userId: string, data: SignupFormData) => {
+        const { error: updateError } = await supabase
+            .from('profiles')
+            .upsert({
+                id: userId,
+                name: data.full_name,
+                category: data.category,
+                district: data.district,
+                institution: data.institution_name,
+                course_of_study: data.course_of_study,
+                class_level: data.class_level,
+                phone: data.mobile_number || null,
+                email: data.email || null,
+                terms_accepted: true,
+                terms_accepted_at: new Date().toISOString(),
+            });
+
+        if (updateError) throw updateError;
+    };
+
     const onDetailsSubmit = async (data: SignupFormData) => {
         try {
             setLoading(true);
-            const { error } = await supabase.auth.signInWithOtp({
-                phone: `+91${data.mobile_number}`,
-                options: {
-                    shouldCreateUser: true,
-                    data: {
-                        name: data.full_name,
-                        terms_accepted: true,
-                        // Store other metadata if needed, but we'll update profile after
+
+            if (signupMethod === 'phone' && data.mobile_number) {
+                const { error } = await supabase.auth.signInWithOtp({
+                    phone: `+91${data.mobile_number}`,
+                    options: {
+                        shouldCreateUser: true,
+                        data: {
+                            name: data.full_name,
+                            terms_accepted: true,
+                        },
                     },
-                },
-            });
+                });
 
-            if (error) throw error;
+                if (error) throw error;
 
-            toast.success('OTP sent to your mobile number');
-            setStep('otp');
-            setCountdown(60);
+                toast.success('OTP sent to your mobile number');
+                setStep('otp');
+                setCountdown(60);
+            } else if (signupMethod === 'email' && data.email && data.password) {
+                const { data: authData, error } = await supabase.auth.signUp({
+                    email: data.email,
+                    password: data.password,
+                    options: {
+                        data: {
+                            name: data.full_name,
+                            terms_accepted: true,
+                        },
+                    },
+                });
+
+                if (error) throw error;
+
+                if (authData.user) {
+                    await createProfile(authData.user.id, data);
+                    toast.success('Account created successfully!');
+                    // If session is null, email confirmation is required
+                    if (!authData.session) {
+                        toast.info('Please check your email to confirm your account.');
+                    }
+                }
+            }
         } catch (error: unknown) {
-            const message = error instanceof Error ? error.message : 'Failed to send OTP';
+            const message = error instanceof Error ? error.message : 'Failed to sign up';
             toast.error(message);
         } finally {
             setLoading(false);
@@ -87,46 +135,9 @@ export const SignupForm: React.FC = () => {
             if (error) throw error;
             if (!session?.user) throw new Error('No session created');
 
-            // Update profile with all details
-            const { error: updateError } = await supabase
-                .from('profiles')
-                .update({
-                    name: data.full_name,
-                    category: data.category,
-                    district: data.district,
-                    institution: data.institution_name,
-                    course_of_study: data.course_of_study,
-                    class_level: data.class_level,
-                    phone: data.mobile_number,
-                    terms_accepted: true,
-                    terms_accepted_at: new Date().toISOString(),
-                })
-                .eq('id', session.user.id);
-
-            if (updateError) {
-                // If update fails (e.g. RLS), we might need to insert if it's a new user
-                // But the trigger should have created the row.
-                // Let's try upsert just in case
-                const { error: upsertError } = await supabase
-                    .from('profiles')
-                    .upsert({
-                        id: session.user.id,
-                        name: data.full_name,
-                        category: data.category,
-                        district: data.district,
-                        institution: data.institution_name,
-                        course_of_study: data.course_of_study,
-                        class_level: data.class_level,
-                        phone: data.mobile_number,
-                        terms_accepted: true,
-                        terms_accepted_at: new Date().toISOString(),
-                    });
-
-                if (upsertError) throw upsertError;
-            }
+            await createProfile(session.user.id, data);
 
             toast.success('Account created successfully!');
-            // Redirect or handle success (App will auto-redirect based on session)
 
         } catch (error: unknown) {
             const message = error instanceof Error ? error.message : 'Invalid OTP';
@@ -160,6 +171,31 @@ export const SignupForm: React.FC = () => {
 
                 {step === 'details' ? (
                     <form onSubmit={form.handleSubmit(onDetailsSubmit)} className="space-y-4">
+
+                        {/* Signup Method Toggle */}
+                        <div className="flex p-1 bg-zinc-100 dark:bg-zinc-800 rounded-xl mb-6">
+                            <button
+                                type="button"
+                                onClick={() => setSignupMethod('phone')}
+                                className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${signupMethod === 'phone'
+                                    ? 'bg-white dark:bg-zinc-700 text-indigo-600 shadow-sm'
+                                    : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
+                                    }`}
+                            >
+                                Mobile Number
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setSignupMethod('email')}
+                                className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${signupMethod === 'email'
+                                    ? 'bg-white dark:bg-zinc-700 text-indigo-600 shadow-sm'
+                                    : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
+                                    }`}
+                            >
+                                Email & Password
+                            </button>
+                        </div>
+
                         <div className="space-y-4">
                             {/* Full Name */}
                             <div>
@@ -173,20 +209,48 @@ export const SignupForm: React.FC = () => {
                                 )}
                             </div>
 
-                            {/* Mobile */}
-                            <div>
-                                <div className="relative">
-                                    <span className="absolute left-4 top-3.5 text-zinc-400">+91</span>
-                                    <input
-                                        {...form.register('mobile_number')}
-                                        placeholder="Mobile Number"
-                                        className="w-full pl-12 pr-4 py-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                                    />
+                            {signupMethod === 'phone' ? (
+                                /* Mobile */
+                                <div>
+                                    <div className="relative">
+                                        <span className="absolute left-4 top-3.5 text-zinc-400">+91</span>
+                                        <input
+                                            {...form.register('mobile_number')}
+                                            placeholder="Mobile Number"
+                                            className="w-full pl-12 pr-4 py-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                                        />
+                                    </div>
+                                    {form.formState.errors.mobile_number && (
+                                        <p className="text-xs text-red-500 mt-1 ml-1">{form.formState.errors.mobile_number.message}</p>
+                                    )}
                                 </div>
-                                {form.formState.errors.mobile_number && (
-                                    <p className="text-xs text-red-500 mt-1 ml-1">{form.formState.errors.mobile_number.message}</p>
-                                )}
-                            </div>
+                            ) : (
+                                /* Email & Password */
+                                <>
+                                    <div>
+                                        <input
+                                            {...form.register('email')}
+                                            type="email"
+                                            placeholder="Email Address"
+                                            className="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                                        />
+                                        {form.formState.errors.email && (
+                                            <p className="text-xs text-red-500 mt-1 ml-1">{form.formState.errors.email.message}</p>
+                                        )}
+                                    </div>
+                                    <div>
+                                        <input
+                                            {...form.register('password')}
+                                            type="password"
+                                            placeholder="Password (min 6 chars)"
+                                            className="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                                        />
+                                        {form.formState.errors.password && (
+                                            <p className="text-xs text-red-500 mt-1 ml-1">{form.formState.errors.password.message}</p>
+                                        )}
+                                    </div>
+                                </>
+                            )}
 
                             {/* Category & District Row */}
                             <div className="grid grid-cols-2 gap-4">
