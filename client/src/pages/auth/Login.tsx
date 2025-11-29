@@ -1,9 +1,21 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { AuthLayout } from '../../components/auth/AuthLayout';
 import { LoginForm } from '../../components/auth/LoginForm';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../hooks/useAuth';
 
 export const Login: React.FC = () => {
+    const { isAuthenticated, isLoading } = useAuth();
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        if (!isLoading && isAuthenticated) {
+            navigate('/dashboard', { replace: true });
+        }
+    }, [isAuthenticated, isLoading, navigate]);
+
+    if (isLoading && isAuthenticated) return null;
+
     return (
         <AuthLayout>
             <LoginForm />
