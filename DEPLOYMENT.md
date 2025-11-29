@@ -1,3 +1,10 @@
+# Current Deployment Status
+- **Live URL**: https://play-qzv3.vercel.app
+- **Platform**: Vercel
+- **Repository**: https://github.com/vibeai-casv/PlayQzv3
+- **Supabase Project**: PlayQz (hkqafdmneiwjgaijieac)
+- **Last Updated**: 2025-11-29
+
 # Deployment Guide
 
 This guide outlines the steps to deploy the AI Quiz Application to production.
