@@ -1,13 +1,17 @@
 import { z } from 'zod';
 
 export const loginSchema = z.object({
-    email: z.string().email('Invalid email address').optional(),
-    phone: z.string().regex(/^[6-9]\d{9}$/, 'Invalid Indian mobile number').optional(),
-    password: z.string().min(6, 'Password must be at least 6 characters').optional(),
+    email: z.string().email('Invalid email address').optional().or(z.literal('')),
+    phone: z.string().regex(/^[6-9]\d{9}$/, 'Invalid Indian mobile number').optional().or(z.literal('')),
+    password: z.string().min(6, 'Password must be at least 6 characters').optional().or(z.literal('')),
     rememberMe: z.boolean().optional(),
-}).refine((data) => data.email || data.phone, {
-    message: "Email or phone number is required",
-    path: ["email"],
+}).refine((data) => {
+    const hasPhone = data.phone && data.phone.length > 0;
+    const hasEmail = data.email && data.email.length > 0 && data.password && data.password.length > 0;
+    return hasPhone || hasEmail;
+}, {
+    message: "Please enter your mobile number OR email and password",
+    path: ["phone"],
 });
 
 export const signupSchema = z.object({
