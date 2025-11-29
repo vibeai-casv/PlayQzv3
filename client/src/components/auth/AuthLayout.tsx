@@ -16,8 +16,12 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ children }) => {
 
                 {/* Logo */}
                 <div className="flex justify-center mb-8">
-                    <div className="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl">
-                        <BrainCircuit className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
+                    <div className="w-24 h-24 relative">
+                        <img
+                            src="/aiqmpm.png"
+                            alt="PlayQz Logo"
+                            className="w-full h-full object-contain"
+                        />
                     </div>
                 </div>
 

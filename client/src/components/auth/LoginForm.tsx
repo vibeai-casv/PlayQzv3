@@ -40,11 +40,13 @@ export const LoginForm: React.FC = () => {
         }
     };
 
+    const [loginMethod, setLoginMethod] = useState<'phone' | 'email'>('phone');
+
     const onSubmit = async (data: LoginFormData) => {
         try {
             setLoading(true);
 
-            if (data.phone) {
+            if (loginMethod === 'phone' && data.phone) {
                 // Phone Login Flow
                 const { error } = await supabase.auth.signInWithOtp({
                     phone: `+91${data.phone}`,
@@ -55,18 +57,17 @@ export const LoginForm: React.FC = () => {
                 toast.success('OTP sent to your mobile number');
                 setStep('otp');
                 setCountdown(60);
-            } else if (data.email) {
-                // Email/Password Login (if supported) or Magic Link
-                // Assuming Magic Link for now as password wasn't explicitly requested but "Login Component" usually implies it.
-                // But user request only mentioned "Google Sign In" and "Phone OTP".
-                // I'll stick to Phone OTP as the primary alternative to Google.
-                // The schema allows email, but I'll focus on Phone for this form based on requirements.
-                // If email is entered, I'll send magic link.
-                const { error } = await supabase.auth.signInWithOtp({
+            } else if (loginMethod === 'email' && data.email && data.password) {
+                // Email/Password Login
+                const { error } = await supabase.auth.signInWithPassword({
                     email: data.email,
+                    password: data.password,
                 });
+
                 if (error) throw error;
-                toast.success('Magic link sent to your email');
+
+                toast.success('Welcome back!');
+                // Auth state listener will handle redirect
             }
         } catch (error: unknown) {
             const message = error instanceof Error ? error.message : 'Failed to sign in';
@@ -111,19 +112,70 @@ export const LoginForm: React.FC = () => {
 
             {step === 'credentials' ? (
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                    <div>
-                        <div className="relative">
-                            <span className="absolute left-4 top-3.5 text-zinc-400">+91</span>
-                            <input
-                                {...form.register('phone')}
-                                placeholder="Mobile Number"
-                                className="w-full pl-12 pr-4 py-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                            />
-                        </div>
-                        {form.formState.errors.phone && (
-                            <p className="text-xs text-red-500 mt-1 ml-1">{form.formState.errors.phone.message}</p>
-                        )}
+                    {/* Login Method Toggle */}
+                    <div className="flex p-1 bg-zinc-100 dark:bg-zinc-800 rounded-xl mb-6">
+                        <button
+                            type="button"
+                            onClick={() => setLoginMethod('phone')}
+                            className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${loginMethod === 'phone'
+                                    ? 'bg-white dark:bg-zinc-700 text-indigo-600 shadow-sm'
+                                    : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
+                                }`}
+                        >
+                            Mobile Number
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setLoginMethod('email')}
+                            className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${loginMethod === 'email'
+                                    ? 'bg-white dark:bg-zinc-700 text-indigo-600 shadow-sm'
+                                    : 'text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300'
+                                }`}
+                        >
+                            Email & Password
+                        </button>
                     </div>
+
+                    {loginMethod === 'phone' ? (
+                        <div>
+                            <div className="relative">
+                                <span className="absolute left-4 top-3.5 text-zinc-400">+91</span>
+                                <input
+                                    {...form.register('phone')}
+                                    placeholder="Mobile Number"
+                                    className="w-full pl-12 pr-4 py-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                                />
+                            </div>
+                            {form.formState.errors.phone && (
+                                <p className="text-xs text-red-500 mt-1 ml-1">{form.formState.errors.phone.message}</p>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            <div>
+                                <input
+                                    {...form.register('email')}
+                                    type="email"
+                                    placeholder="Email Address"
+                                    className="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                                />
+                                {form.formState.errors.email && (
+                                    <p className="text-xs text-red-500 mt-1 ml-1">{form.formState.errors.email.message}</p>
+                                )}
+                            </div>
+                            <div>
+                                <input
+                                    {...form.register('password')}
+                                    type="password"
+                                    placeholder="Password"
+                                    className="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                                />
+                                {form.formState.errors.password && (
+                                    <p className="text-xs text-red-500 mt-1 ml-1">{form.formState.errors.password.message}</p>
+                                )}
+                            </div>
+                        </div>
+                    )}
 
                     <div className="flex items-center justify-between">
                         <label className="flex items-center gap-2 cursor-pointer">
@@ -143,7 +195,7 @@ export const LoginForm: React.FC = () => {
                     >
                         {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (
                             <>
-                                Sign In with OTP <ArrowRight className="w-4 h-4" />
+                                {loginMethod === 'phone' ? 'Sign In with OTP' : 'Sign In'} <ArrowRight className="w-4 h-4" />
                             </>
                         )}
                     </button>
